@@ -74,6 +74,7 @@ public class AuthService {
      * 왜? → 공격자에게 "이 이메일은 존재한다"는 정보를 주지 않기 위해서다.
      * → 이를 "에러 메시지 통일(Error Message Normalization)"이라 한다.
      */
+    @Transactional
     public TokenResponse login(LoginRequest request) {
         // 이메일로 회원 조회 (삭제되지 않은 회원만)
         Member member = memberRepository.findByEmailAndDeletedFalse(request.getEmail())
@@ -83,6 +84,9 @@ public class AuthService {
         if (!passwordEncoder.matches(request.getPassword(), member.getPassword())) {
             throw new BusinessException(ErrorCode.LOGIN_FAILED);
         }
+
+        // 마지막 로그인 시각 업데이트 (JPA 더티체킹으로 자동 반영)
+        member.updateLastLogin();
 
         // JWT 토큰 생성
         String accessToken = jwtTokenProvider.createAccessToken(

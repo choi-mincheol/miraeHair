@@ -7,6 +7,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 /**
  * 회원(관리자) 엔티티
  *
@@ -88,6 +90,14 @@ public class Member extends BaseEntity {
                 .name(name)
                 .role(MemberRole.ROLE_ADMIN)
                 .build();
+    }
+
+    /** 마지막 로그인 시각 (가입 직후에는 null) */
+    private LocalDateTime lastLoginAt;
+
+    /** 마지막 로그인 시각을 현재 시각으로 업데이트 */
+    public void updateLastLogin() {
+        this.lastLoginAt = LocalDateTime.now();
     }
 
     /**

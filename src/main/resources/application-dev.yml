@@ -26,6 +26,15 @@ spring:
       host: localhost
       port: 6379
 
+# JWT 설정 (개발용 - 운영에서는 반드시 환경변수로 교체)
+jwt:
+  secret: dev-jwt-secret-key-for-mirae-hair-project-2024-must-be-long
+
+# AES-256 암호화 설정 (개발용 - 반드시 32바이트)
+encryption:
+  aes:
+    secret-key: dev-aes256-secret-key-32bytes!!!
+
 # 로깅 설정 (개발 환경에서는 DEBUG 레벨)
 logging:
   level:

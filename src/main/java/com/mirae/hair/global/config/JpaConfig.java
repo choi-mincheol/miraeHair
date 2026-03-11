@@ -4,6 +4,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.domain.AuditorAware;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.Optional;
 
@@ -30,13 +33,25 @@ public class JpaConfig {
      * AuditorAware: "현재 작업을 수행하는 사용자가 누구인지" 알려주는 Bean
      *
      * BaseEntity의 @CreatedBy, @LastModifiedBy 값을 채울 때 사용된다.
-     * 현재는 JWT 인증이 없으므로 "SYSTEM"으로 고정한다.
      *
-     * feature/02-security-jwt에서 SecurityContext에서 로그인 사용자 정보를 꺼내도록 변경 예정:
-     * → return () -> Optional.of(SecurityContextHolder.getContext().getAuthentication().getName());
+     * SecurityContext에서 인증된 사용자의 이메일을 가져온다.
+     * → 인증 정보가 없으면 (로그인 전, 익명 사용자) "SYSTEM"을 반환한다.
+     * → 인증 정보가 있으면 JWT에서 추출한 이메일(subject)을 반환한다.
      */
     @Bean
     public AuditorAware<String> auditorAware() {
-        return () -> Optional.of("SYSTEM");
+        return () -> {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+            // 인증 정보가 없거나, 익명 사용자인 경우 → "SYSTEM"
+            if (authentication == null
+                    || !authentication.isAuthenticated()
+                    || authentication instanceof AnonymousAuthenticationToken) {
+                return Optional.of("SYSTEM");
+            }
+
+            // 인증된 사용자 → 이메일(JWT subject) 반환
+            return Optional.of(authentication.getName());
+        };
     }
 }

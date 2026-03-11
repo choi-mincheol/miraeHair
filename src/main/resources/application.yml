@@ -27,6 +27,16 @@ springdoc:
   api-docs:
     path: /v3/api-docs
 
+# JWT 설정
+jwt:
+  access-token-expiration: 1800000    # AccessToken 만료: 30분 (밀리초)
+  refresh-token-expiration: 604800000 # RefreshToken 만료: 7일 (밀리초)
+
+# AES-256 암호화 설정
+encryption:
+  aes:
+    secret-key: ${AES_SECRET_KEY:}    # 환경변수에서 주입 (프로필별로 오버라이드)
+
 # MyBatis 설정
 mybatis:
   # mapper XML 파일 위치 (src/main/resources/mapper/ 하위 전체)

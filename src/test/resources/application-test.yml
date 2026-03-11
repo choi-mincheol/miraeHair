@@ -1,0 +1,48 @@
+# ===========================================
+# 테스트 환경 설정 (H2 인메모리 DB)
+# ===========================================
+# 왜 H2를 사용하는가?
+# → 테스트는 외부 인프라(PostgreSQL, Redis)에 의존하면 안 된다.
+# → H2는 JVM 내부에서 실행되는 인메모리 DB로, 별도 설치 없이 테스트할 수 있다.
+# → 테스트가 끝나면 데이터가 사라지므로 테스트 간 간섭도 없다.
+#
+# MODE=PostgreSQL:
+# → H2가 PostgreSQL 호환 모드로 동작한다.
+# → PostgreSQL 전용 문법(ILIKE 등)도 일부 지원된다.
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  # 테스트에서 Redis 비활성화
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+
+# JWT 설정 (테스트용)
+jwt:
+  secret: test-jwt-secret-key-for-hair-project-must-be-long-enough-32chars
+
+# AES-256 설정 (테스트용 - 반드시 32바이트)
+encryption:
+  aes:
+    secret-key: test-aes256-secret-key-32bytes!!
+
+# 로깅 최소화
+logging:
+  level:
+    com.mirae.hair: INFO

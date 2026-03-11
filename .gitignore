@@ -35,3 +35,6 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### 면접 Q&A (로컬 전용) ###
+docs/qna/

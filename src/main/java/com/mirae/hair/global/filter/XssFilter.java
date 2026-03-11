@@ -78,11 +78,12 @@ public class XssFilter implements Filter {
             return sanitizedValues;
         }
 
-        @Override
-        public String getHeader(String name) {
-            String value = super.getHeader(name);
-            return sanitize(value);
-        }
+        /**
+         * 왜 getHeader()는 sanitize하지 않는가?
+         * → Authorization 헤더에 JWT 토큰이 담겨 있는데, sanitize하면 토큰이 손상된다.
+         * → Content-Type, Accept 등 시스템 헤더도 변형되면 안 된다.
+         * → HTTP 헤더는 브라우저에서 직접 렌더링되지 않으므로 XSS 위험이 낮다.
+         */
 
         /**
          * HTML 특수문자를 이스케이프 처리

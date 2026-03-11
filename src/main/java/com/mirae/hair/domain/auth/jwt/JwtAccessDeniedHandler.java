@@ -5,6 +5,7 @@ import com.mirae.hair.global.dto.ApiResponse;
 import com.mirae.hair.global.exception.ErrorCode;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.web.access.AccessDeniedHandler;
@@ -22,12 +23,17 @@ import java.io.IOException;
  * 인증(Authentication) vs 인가(Authorization):
  * → 인증: "너 누구야?" → 401 (JwtAuthenticationEntryPoint)
  * → 인가: "너 이거 할 수 있어?" → 403 (이 핸들러)
+ *
+ * 왜 ObjectMapper를 Bean으로 주입받는가?
+ * → new ObjectMapper()로 직접 생성하면 Spring의 Jackson 설정(날짜 형식, Null 처리 등)이 적용되지 않는다.
+ * → Spring 컨텍스트에 등록된 ObjectMapper Bean을 주입받으면 설정이 일관성 있게 적용된다.
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class JwtAccessDeniedHandler implements AccessDeniedHandler {
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
 
     @Override
     public void handle(

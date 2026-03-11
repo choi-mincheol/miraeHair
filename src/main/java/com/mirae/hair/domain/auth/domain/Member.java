@@ -89,4 +89,22 @@ public class Member extends BaseEntity {
                 .role(MemberRole.ROLE_ADMIN)
                 .build();
     }
+
+    /**
+     * 비밀번호 변경 도메인 메서드
+     * → @Setter 없이 비밀번호를 변경하려면 이 메서드를 통해서만 가능하다.
+     * → 반드시 인코딩된(BCrypt 해시) 비밀번호를 전달해야 한다.
+     */
+    public void changePassword(String encodedPassword) {
+        this.password = encodedPassword;
+    }
+
+    /**
+     * 회원 탈퇴 (Soft Delete)
+     * → 실제로 DB에서 삭제하지 않고, deleted 플래그만 true로 변경한다.
+     * → 왜 Soft Delete? → 데이터 복구가 가능하고, 주문 이력 등 연관 데이터의 무결성을 유지할 수 있다.
+     */
+    public void softDelete() {
+        this.deleted = true;
+    }
 }

@@ -29,6 +29,7 @@ springdoc:
 
 # JWT 설정
 jwt:
+  secret: ${JWT_SECRET:}              # 환경변수에서 주입 (프로필별로 오버라이드)
   access-token-expiration: 1800000    # AccessToken 만료: 30분 (밀리초)
   refresh-token-expiration: 604800000 # RefreshToken 만료: 7일 (밀리초)
 

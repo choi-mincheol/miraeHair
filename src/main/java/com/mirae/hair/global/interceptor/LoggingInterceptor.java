@@ -59,7 +59,10 @@ public class LoggingInterceptor implements HandlerInterceptor {
             Object handler,
             Exception ex
     ) {
-        long startTime = (Long) request.getAttribute(START_TIME);
+        // preHandle에서 예외가 발생하면 startTime이 null일 수 있다
+        Object startTimeObj = request.getAttribute(START_TIME);
+        if (startTimeObj == null) return;
+        long startTime = (Long) startTimeObj;
         long duration = System.currentTimeMillis() - startTime;
 
         log.info("[RES] {} {} → {} ({}ms)",

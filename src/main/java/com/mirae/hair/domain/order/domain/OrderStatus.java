@@ -15,6 +15,9 @@ public enum OrderStatus {
     /** 주문 확정 (정상 상태) */
     CONFIRMED("확정"),
 
+    /** 배송중 */
+    SHIPPING("배송중"),
+
     /** 주문 취소됨 */
     CANCELLED("취소");
 

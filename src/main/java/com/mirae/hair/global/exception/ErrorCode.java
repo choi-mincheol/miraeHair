@@ -56,6 +56,7 @@ public enum ErrorCode {
     // === 주문 관련 에러 ===
     ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "주문을 찾을 수 없습니다"),
     ORDER_ALREADY_CANCELLED(HttpStatus.BAD_REQUEST, "이미 취소된 주문입니다"),
+    ORDER_CANNOT_SHIP(HttpStatus.BAD_REQUEST, "배송 처리할 수 없는 주문 상태입니다"),
     ;
 
     /** HTTP 상태 코드 (예: 400, 401, 404, 500) */

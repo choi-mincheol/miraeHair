@@ -131,14 +131,32 @@ public class Order extends BaseEntity {
     }
 
     /**
+     * 배송 처리
+     *
+     * 왜 CONFIRMED 상태에서만 배송 가능한가?
+     * → 취소된 주문을 배송하면 안 된다.
+     * → 이미 배송중인 주문을 또 배송 처리하는 것도 의미가 없다.
+     * → CONFIRMED → SHIPPING만 허용하여 상태 흐름을 명확히 한다.
+     */
+    public void ship() {
+        if (this.status != OrderStatus.CONFIRMED) {
+            throw new BusinessException(ErrorCode.ORDER_CANNOT_SHIP);
+        }
+        this.status = OrderStatus.SHIPPING;
+    }
+
+    /**
      * 주문 취소
      *
-     * 왜 CONFIRMED 상태에서만 취소 가능한가?
+     * 왜 CANCELLED 상태에서는 취소할 수 없는가?
      * → 이미 취소된 주문을 다시 취소하면 재고가 이중으로 복원될 수 있다.
      * → 상태 검증 후 변경하여 이중 취소를 방지한다.
+     *
+     * CONFIRMED, SHIPPING 모두 취소 가능:
+     * → 배송중이더라도 취소 요청이 가능해야 실무에서 유연하게 대응할 수 있다.
      */
     public void cancel() {
-        if (this.status != OrderStatus.CONFIRMED) {
+        if (this.status == OrderStatus.CANCELLED) {
             throw new BusinessException(ErrorCode.ORDER_ALREADY_CANCELLED);
         }
         this.status = OrderStatus.CANCELLED;

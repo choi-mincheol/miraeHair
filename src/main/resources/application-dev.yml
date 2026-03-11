@@ -18,7 +18,7 @@ spring:
     properties:
       hibernate:
         format_sql: true
-        dialect: org.hibernate.dialect.PostgreSQLDialect
+        # Hibernate 6.x는 JDBC URL에서 dialect를 자동 감지하므로 별도 설정 불필요
 
   # Redis 설정
   data:
@@ -31,4 +31,5 @@ logging:
   level:
     com.mirae.hair: DEBUG
     org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    # Hibernate 6.x에서 바인딩 파라미터 로깅 (5.x의 BasicBinder에서 변경됨)
+    org.hibernate.orm.jdbc.bind: TRACE

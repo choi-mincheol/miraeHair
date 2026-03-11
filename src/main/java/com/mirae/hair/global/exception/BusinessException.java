@@ -38,4 +38,16 @@ public class BusinessException extends RuntimeException {
         super(errorCode.getMessage());
         this.errorCode = errorCode;
     }
+
+    /**
+     * 상세 메시지를 포함하는 생성자
+     * 기본 에러 메시지 대신 구체적인 정보를 전달하고 싶을 때 사용한다.
+     *
+     * 사용 예: throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "상품을 찾을 수 없습니다 (ID: 123)");
+     * → 로그에 상세 메시지가 기록되어 디버깅이 쉬워진다.
+     */
+    public BusinessException(ErrorCode errorCode, String detailMessage) {
+        super(detailMessage);
+        this.errorCode = errorCode;
+    }
 }

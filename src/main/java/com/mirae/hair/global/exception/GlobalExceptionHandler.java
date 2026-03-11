@@ -1,5 +1,6 @@
 package com.mirae.hair.global.exception;
 
+import com.mirae.hair.global.dto.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -24,7 +25,11 @@ import java.util.stream.Collectors;
  * 동작 흐름:
  * 1) Service에서 throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND)
  * 2) GlobalExceptionHandler가 자동으로 잡아서
- * 3) ErrorResponse 형식으로 변환 + 적절한 HTTP 상태 코드와 함께 반환
+ * 3) ApiResponse 형식으로 변환 + 적절한 HTTP 상태 코드와 함께 반환
+ *
+ * 왜 에러 응답도 ApiResponse로 통일하는가? (ErrorResponse를 별도로 만들지 않는 이유)
+ * → 성공/실패 응답 형식이 다르면 프론트엔드에서 두 가지 파싱 로직이 필요하다.
+ * → ApiResponse 하나로 통일하면 response.success 값만 보고 분기하면 된다.
  */
 @Slf4j
 @RestControllerAdvice
@@ -35,13 +40,18 @@ public class GlobalExceptionHandler {
      * BusinessException이 발생하면 이 메서드가 자동으로 호출된다.
      *
      * 예: throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND)
-     * → HTTP 404 + {"success": false, "code": "RESOURCE_NOT_FOUND", ...}
+     * → HTTP 404 + {"success": false, "errorCode": "RESOURCE_NOT_FOUND", ...}
+     *
+     * 왜 log.warn인가? (log.error가 아닌 이유)
+     * → BusinessException은 "예상된" 예외이다 (상품 없음, 재고 부족 등).
+     * → error 레벨은 "예상치 못한" 심각한 오류에 사용한다.
+     * → 비즈니스 예외는 warn으로 기록하면 로그에서 진짜 에러와 구분하기 쉽다.
      */
     @ExceptionHandler(BusinessException.class)
-    protected ResponseEntity<ErrorResponse> handleBusinessException(BusinessException e) {
-        log.error("BusinessException: {}", e.getMessage());
+    protected ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException e) {
+        log.warn("BusinessException: {}", e.getMessage());
         ErrorCode errorCode = e.getErrorCode();
-        ErrorResponse response = ErrorResponse.from(errorCode);
+        ApiResponse<Void> response = ApiResponse.fail(errorCode);
         return ResponseEntity.status(errorCode.getStatus()).body(response);
     }
 
@@ -50,15 +60,15 @@ public class GlobalExceptionHandler {
      * 요청 DTO에 @NotBlank, @Min 등의 제약 조건을 위반하면 이 메서드가 호출된다.
      *
      * 예: ProductCreateRequest의 name이 빈 문자열이면
-     * → HTTP 400 + {"success": false, "code": "INVALID_INPUT", "message": "상품명은 필수입니다", ...}
+     * → HTTP 400 + {"success": false, "errorCode": "INVALID_INPUT", "message": "name: 필수 입력입니다", ...}
      *
      * 왜 필드별 에러 메시지를 모아서 반환하는가?
      * → 프론트엔드에서 어떤 필드가 잘못됐는지 한눈에 보여줄 수 있다.
      * → "이름이 비었습니다, 가격은 0 이상이어야 합니다" 같은 메시지를 한 번에 전달한다.
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    protected ResponseEntity<ErrorResponse> handleMethodArgumentNotValid(MethodArgumentNotValidException e) {
-        log.error("Validation Exception: {}", e.getMessage());
+    protected ResponseEntity<ApiResponse<Void>> handleMethodArgumentNotValid(MethodArgumentNotValidException e) {
+        log.warn("Validation Exception: {}", e.getMessage());
 
         // 모든 필드 에러 메시지를 모아서 하나의 문자열로 합친다
         String errorMessage = e.getBindingResult()
@@ -67,13 +77,7 @@ public class GlobalExceptionHandler {
                 .map(error -> error.getField() + ": " + error.getDefaultMessage())
                 .collect(Collectors.joining(", "));
 
-        ErrorResponse response = ErrorResponse.builder()
-                .success(false)
-                .code(ErrorCode.INVALID_INPUT.name())
-                .message(errorMessage)
-                .status(ErrorCode.INVALID_INPUT.getStatus().value())
-                .build();
-
+        ApiResponse<Void> response = ApiResponse.fail(ErrorCode.INVALID_INPUT, errorMessage);
         return ResponseEntity.status(ErrorCode.INVALID_INPUT.getStatus()).body(response);
     }
 
@@ -84,16 +88,16 @@ public class GlobalExceptionHandler {
      * → BusinessException이나 Validation 예외가 아닌 예상치 못한 에러가 발생할 수 있다.
      *   (예: NullPointerException, DB 연결 실패 등)
      * → 이 핸들러가 없으면 Spring 기본 에러 페이지(Whitelabel Error Page)가 나온다.
-     * → 이 핸들러가 있으면 항상 우리가 정한 형식(ErrorResponse)으로 응답한다.
+     * → 이 핸들러가 있으면 항상 우리가 정한 형식(ApiResponse)으로 응답한다.
      *
      * 주의: 운영 환경에서는 e.getMessage()에 민감한 정보가 포함될 수 있으므로
      * 고정 메시지("서버 내부 오류")를 반환하고, 상세 내용은 로그에만 기록한다.
      */
     @ExceptionHandler(Exception.class)
-    protected ResponseEntity<ErrorResponse> handleException(Exception e) {
+    protected ResponseEntity<ApiResponse<Void>> handleException(Exception e) {
         log.error("Unhandled Exception: ", e);
         ErrorCode errorCode = ErrorCode.INTERNAL_SERVER_ERROR;
-        ErrorResponse response = ErrorResponse.from(errorCode);
+        ApiResponse<Void> response = ApiResponse.fail(errorCode);
         return ResponseEntity.status(errorCode.getStatus()).body(response);
     }
 }

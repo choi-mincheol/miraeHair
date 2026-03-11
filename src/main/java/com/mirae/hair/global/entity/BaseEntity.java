@@ -41,13 +41,14 @@ public abstract class BaseEntity {
      * updatable = false: 한번 저장되면 수정 불가 (생성일은 변하면 안 되니까)
      */
     @CreatedDate
-    @Column(updatable = false)
+    @Column(updatable = false, nullable = false)
     private LocalDateTime createdAt;
 
     /**
      * 수정일시 - 엔티티가 수정될 때마다 자동으로 현재 시각으로 업데이트된다.
      */
     @LastModifiedDate
+    @Column(nullable = false)
     private LocalDateTime updatedAt;
 
     /**
@@ -55,7 +56,7 @@ public abstract class BaseEntity {
      * 현재는 "SYSTEM"으로 고정, feature/02-security-jwt에서 실제 로그인 사용자로 교체 예정
      */
     @CreatedBy
-    @Column(updatable = false)
+    @Column(updatable = false, nullable = false)
     private String createdBy;
 
     /**

@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    상품 조회 MyBatis SQL
+    CQRS 패턴에서 Query(조회) 담당.
+    JPA 대신 MyBatis를 사용하는 이유:
+    → 복잡한 JOIN, 조건부 검색, 페이징을 직접 SQL로 작성하면 더 직관적이다.
+    → JPA의 JPQL/Criteria로 동적 쿼리를 작성하면 코드가 복잡해진다.
+    → MyBatis의 <if> 태그로 조건부 SQL을 깔끔하게 작성할 수 있다.
+-->
+<mapper namespace="com.mirae.hair.domain.product.query.ProductQueryMapper">
+
+    <!--
+        상품 목록 resultMap
+        → MyBatis가 SQL 결과를 ProductListDto로 매핑하는 규칙을 정의한다.
+        → application.yml에서 map-underscore-to-camel-case: true로 설정했으므로
+          snake_case 컬럼명이 camelCase 필드명으로 자동 매핑된다.
+        → 하지만 컬럼 별칭(AS)을 사용한 경우에는 resultMap으로 명시하는 것이 확실하다.
+    -->
+    <resultMap id="productListResultMap" type="com.mirae.hair.domain.product.dto.ProductListDto">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="brand" column="brand"/>
+        <result property="categoryId" column="category_id"/>
+        <result property="categoryName" column="category_name"/>
+        <result property="price" column="price"/>
+        <result property="totalStock" column="total_stock"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <!--
+        상품 상세 resultMap (옵션 목록 포함)
+
+        왜 <collection>을 사용하는가?
+        → products LEFT JOIN product_options를 하면, 옵션이 2개인 상품은 2행이 나온다.
+        → MyBatis의 <collection>은 이 여러 행을 "상품 1개 + 옵션 리스트"로 자동 그룹핑한다.
+        → <id> 태그가 그룹핑의 기준이 된다 (product.id가 같으면 같은 상품으로 묶는다).
+
+        왜 LEFT JOIN인가? (INNER JOIN이 아닌 이유)
+        → 옵션이 없는 상품도 조회될 수 있어야 한다.
+        → INNER JOIN이면 옵션이 없는 상품은 결과에서 빠진다.
+        → LEFT JOIN이면 옵션이 없어도 상품 정보는 조회되고, 옵션 컬럼은 null이 된다.
+    -->
+    <resultMap id="productDetailResultMap" type="com.mirae.hair.domain.product.dto.ProductDetailDto">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="brand" column="brand"/>
+        <result property="categoryId" column="category_id"/>
+        <result property="categoryName" column="category_name"/>
+        <result property="price" column="price"/>
+        <result property="description" column="description"/>
+        <result property="deleted" column="is_deleted"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="createdBy" column="created_by"/>
+        <collection property="options" ofType="com.mirae.hair.domain.product.dto.ProductOptionDto">
+            <id property="id" column="option_id"/>
+            <result property="optionName" column="option_name"/>
+            <result property="additionalPrice" column="additional_price"/>
+            <result property="stockQuantity" column="stock_quantity"/>
+        </collection>
+    </resultMap>
+
+    <!--
+        상품 목록 조회 (페이징 + 검색 + 카테고리 필터)
+
+        MyBatis 동적 SQL 태그:
+        → <if test="...">: 조건이 true일 때만 SQL에 포함된다.
+        → keyword가 null이거나 빈 문자열이면 검색 조건이 생략된다.
+        → categoryId가 null이면 카테고리 필터가 생략된다.
+
+        ILIKE vs LIKE:
+        → PostgreSQL에서 ILIKE는 대소문자 무시 검색이다.
+        → LIKE는 대소문자를 구분한다.
+        → 사용자가 "모로칸"이든 "모로칸오일"이든 검색할 수 있어야 하므로 ILIKE를 사용한다.
+
+        COALESCE(SUM(...), 0):
+        → 옵션이 없는 상품의 경우 SUM 결과가 null이 된다.
+        → COALESCE로 null을 0으로 변환한다.
+    -->
+    <select id="selectProductList" resultMap="productListResultMap">
+        SELECT p.id,
+               p.name,
+               p.brand,
+               p.category_id,
+               c.name AS category_name,
+               p.price,
+               COALESCE(SUM(po.stock_quantity), 0) AS total_stock,
+               p.created_at
+        FROM products p
+                 JOIN categories c ON p.category_id = c.id
+                 LEFT JOIN product_options po ON p.id = po.product_id AND po.is_deleted = false
+        WHERE p.is_deleted = false
+        <if test="keyword != null and keyword != ''">
+            AND (p.name ILIKE '%' || #{keyword} || '%'
+            OR p.brand ILIKE '%' || #{keyword} || '%')
+        </if>
+        <if test="categoryId != null">
+            AND p.category_id = #{categoryId}
+        </if>
+        GROUP BY p.id, p.name, p.brand, p.category_id, c.name, p.price, p.created_at
+        ORDER BY p.created_at DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <!--
+        상품 총 건수 (페이징 계산용)
+        → Page 객체를 만들려면 전체 건수(totalElements)가 필요하다.
+        → 목록 조회와 동일한 WHERE 조건을 사용해야 정확한 건수가 나온다.
+    -->
+    <select id="countProducts" resultType="long">
+        SELECT COUNT(*)
+        FROM products p
+        WHERE p.is_deleted = false
+        <if test="keyword != null and keyword != ''">
+            AND (p.name ILIKE '%' || #{keyword} || '%'
+            OR p.brand ILIKE '%' || #{keyword} || '%')
+        </if>
+        <if test="categoryId != null">
+            AND p.category_id = #{categoryId}
+        </if>
+    </select>
+
+    <!--
+        상품 상세 조회 (옵션 포함)
+        → is_deleted = false인 상품만 조회하지 않는다 (삭제된 상품도 상세는 볼 수 있다).
+        → 단, 옵션은 is_deleted = false인 것만 표시한다.
+    -->
+    <select id="selectProductDetail" resultMap="productDetailResultMap">
+        SELECT p.id,
+               p.name,
+               p.brand,
+               p.category_id,
+               c.name AS category_name,
+               p.price,
+               p.description,
+               p.is_deleted,
+               p.created_at,
+               p.updated_at,
+               p.created_by,
+               po.id AS option_id,
+               po.option_name,
+               po.additional_price,
+               po.stock_quantity
+        FROM products p
+                 JOIN categories c ON p.category_id = c.id
+                 LEFT JOIN product_options po ON p.id = po.product_id AND po.is_deleted = false
+        WHERE p.id = #{id}
+    </select>
+
+</mapper>

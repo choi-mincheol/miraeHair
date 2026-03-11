@@ -1,0 +1,68 @@
+package com.mirae.hair.domain.product.controller;
+
+import com.mirae.hair.domain.product.command.CategoryCommandService;
+import com.mirae.hair.domain.product.dto.CategoryCreateRequest;
+import com.mirae.hair.domain.product.dto.CategoryDto;
+import com.mirae.hair.domain.product.query.ProductQueryService;
+import com.mirae.hair.global.dto.ApiResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+/**
+ * 카테고리 REST API Controller
+ *
+ * CQRS 패턴 적용:
+ * → CategoryCommandService: 등록 (JPA)
+ * → ProductQueryService: 조회 (MyBatis)
+ * → Controller 하나에서 두 서비스를 모두 주입받아 사용한다.
+ *
+ * 왜 Controller에서 두 서비스를 모두 사용하는가?
+ * → Controller는 "어떤 요청이 오면 어떤 서비스를 호출할지" 라우팅하는 역할이다.
+ * → 등록 요청 → CommandService, 조회 요청 → QueryService로 분배한다.
+ * → 서비스 내부는 분리되지만, 클라이언트에게는 하나의 API 엔드포인트로 보인다.
+ */
+@Tag(name = "카테고리", description = "카테고리 관리 API")
+@RestController
+@RequestMapping("/api/categories")
+@RequiredArgsConstructor
+public class CategoryController {
+
+    private final CategoryCommandService categoryCommandService;
+    private final ProductQueryService productQueryService;
+
+    /**
+     * 카테고리 등록
+     *
+     * 왜 ResponseEntity로 감싸는가?
+     * → HTTP 상태 코드를 명시적으로 지정할 수 있다.
+     * → 생성 성공 시 201(CREATED)을 반환한다. 200(OK)과 구분하기 위해서이다.
+     * → REST API 관례: 리소스 생성 시 201, 일반 성공 시 200
+     */
+    @Operation(summary = "카테고리 등록", description = "새로운 카테고리를 등록합니다")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "등록 성공")
+    @PostMapping
+    public ResponseEntity<ApiResponse<Long>> createCategory(
+            @RequestBody @Valid CategoryCreateRequest request) {
+        Long categoryId = categoryCommandService.createCategory(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(categoryId, "카테고리가 등록되었습니다"));
+    }
+
+    /**
+     * 카테고리 목록 조회
+     */
+    @Operation(summary = "카테고리 목록 조회", description = "전체 카테고리 목록을 표시 순서대로 조회합니다")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공")
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<CategoryDto>>> getCategoryList() {
+        List<CategoryDto> categories = productQueryService.getCategoryList();
+        return ResponseEntity.ok(ApiResponse.success(categories, "카테고리 목록 조회 성공"));
+    }
+}

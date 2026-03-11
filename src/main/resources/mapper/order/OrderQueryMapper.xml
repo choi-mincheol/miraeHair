@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    주문 조회 MyBatis SQL
+
+    핵심: OrderItem에는 가격 Snapshot이 저장되어 있으므로,
+    Product/ProductOption 테이블을 JOIN하지 않아도 주문 시점의 가격과 상품명을 조회할 수 있다.
+    → 이것이 가격 Snapshot의 장점이다!
+    → Product가 삭제되거나 가격이 변경되어도 주문 이력에는 영향이 없다.
+-->
+<mapper namespace="com.mirae.hair.domain.order.query.OrderQueryMapper">
+
+    <!-- 주문 목록 resultMap -->
+    <resultMap id="orderListResultMap" type="com.mirae.hair.domain.order.dto.OrderListDto">
+        <id property="id" column="id"/>
+        <result property="customerShopName" column="customer_shop_name"/>
+        <result property="totalAmount" column="total_amount"/>
+        <result property="itemCount" column="item_count"/>
+        <result property="status" column="status"/>
+        <result property="orderedAt" column="ordered_at"/>
+    </resultMap>
+
+    <!--
+        주문 상세 resultMap (주문항목 포함)
+        → <collection>으로 order_items를 중첩 매핑
+    -->
+    <resultMap id="orderDetailResultMap" type="com.mirae.hair.domain.order.dto.OrderDetailDto">
+        <id property="id" column="id"/>
+        <result property="customerId" column="customer_id"/>
+        <result property="customerShopName" column="customer_shop_name"/>
+        <result property="totalAmount" column="total_amount"/>
+        <result property="status" column="status"/>
+        <result property="memo" column="memo"/>
+        <result property="orderedAt" column="ordered_at"/>
+        <collection property="items" ofType="com.mirae.hair.domain.order.dto.OrderItemDto">
+            <id property="id" column="item_id"/>
+            <result property="productName" column="product_name"/>
+            <result property="optionName" column="option_name"/>
+            <result property="unitPrice" column="unit_price"/>
+            <result property="quantity" column="quantity"/>
+            <result property="subtotal" column="subtotal"/>
+        </collection>
+    </resultMap>
+
+    <!--
+        주문 목록 조회
+        → 고객명은 customers 테이블에서 JOIN
+        → 항목 수는 order_items에서 COUNT
+        → 기간 필터: ordered_at 기준 (DATE 캐스팅으로 날짜만 비교)
+    -->
+    <select id="selectOrderList" resultMap="orderListResultMap">
+        SELECT o.id,
+               c.shop_name AS customer_shop_name,
+               o.total_amount,
+               COUNT(oi.id) AS item_count,
+               o.status,
+               o.ordered_at
+        FROM orders o
+                 JOIN customers c ON o.customer_id = c.id
+                 LEFT JOIN order_items oi ON o.id = oi.order_id
+        WHERE 1=1
+        <if test="customerId != null">
+            AND o.customer_id = #{customerId}
+        </if>
+        <if test="startDate != null">
+            AND CAST(o.ordered_at AS DATE) &gt;= #{startDate}
+        </if>
+        <if test="endDate != null">
+            AND CAST(o.ordered_at AS DATE) &lt;= #{endDate}
+        </if>
+        GROUP BY o.id, c.shop_name, o.total_amount, o.status, o.ordered_at
+        ORDER BY o.ordered_at DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <!-- 주문 총 건수 -->
+    <select id="countOrders" resultType="long">
+        SELECT COUNT(*)
+        FROM orders o
+        WHERE 1=1
+        <if test="customerId != null">
+            AND o.customer_id = #{customerId}
+        </if>
+        <if test="startDate != null">
+            AND CAST(o.ordered_at AS DATE) &gt;= #{startDate}
+        </if>
+        <if test="endDate != null">
+            AND CAST(o.ordered_at AS DATE) &lt;= #{endDate}
+        </if>
+    </select>
+
+    <!--
+        주문 상세 조회 (주문항목 포함)
+        → order_items에 Snapshot된 상품명, 옵션명, 단가가 있으므로
+          products/product_options 테이블을 JOIN하지 않아도 된다!
+    -->
+    <select id="selectOrderDetail" resultMap="orderDetailResultMap">
+        SELECT o.id,
+               o.customer_id,
+               c.shop_name AS customer_shop_name,
+               o.total_amount,
+               o.status,
+               o.memo,
+               o.ordered_at,
+               oi.id AS item_id,
+               oi.product_name,
+               oi.option_name,
+               oi.unit_price,
+               oi.quantity,
+               oi.subtotal
+        FROM orders o
+                 JOIN customers c ON o.customer_id = c.id
+                 LEFT JOIN order_items oi ON o.id = oi.order_id
+        WHERE o.id = #{id}
+    </select>
+
+</mapper>

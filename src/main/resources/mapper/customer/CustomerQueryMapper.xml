@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+    고객(미용실) 조회 MyBatis SQL
+
+    주의: phone, business_number 컬럼은 AES-256으로 암호화된 값이 저장되어 있다.
+    → SQL에서는 암호화된 값 그대로 조회한다.
+    → 복호화는 Java의 QueryService에서 AES256Util.decrypt()로 처리한다.
+
+    검색(keyword) 범위:
+    → 미용실명(shop_name)과 대표자명(owner_name)은 평문이므로 ILIKE 검색 가능.
+    → 전화번호/사업자번호는 암호화되어 있으므로 SQL LIKE 검색이 불가능하다.
+    → 이런 암호화 필드 검색이 필요하면, 검색용 해시 컬럼을 별도로 두는 방법이 있다 (향후 확장).
+-->
+<mapper namespace="com.mirae.hair.domain.customer.query.CustomerQueryMapper">
+
+    <!--
+        고객 목록 조회 (페이징 + 검색)
+        → 삭제되지 않은 고객만 조회 (is_deleted = false)
+        → 미용실명 또는 대표자명으로 검색
+    -->
+    <select id="selectCustomerList" resultType="com.mirae.hair.domain.customer.dto.CustomerListDto">
+        SELECT id,
+               shop_name,
+               owner_name,
+               phone,
+               address,
+               created_at
+        FROM customers
+        WHERE is_deleted = false
+        <if test="keyword != null and keyword != ''">
+            AND (shop_name ILIKE '%' || #{keyword} || '%'
+            OR owner_name ILIKE '%' || #{keyword} || '%')
+        </if>
+        ORDER BY created_at DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <!-- 고객 총 건수 -->
+    <select id="countCustomers" resultType="long">
+        SELECT COUNT(*)
+        FROM customers
+        WHERE is_deleted = false
+        <if test="keyword != null and keyword != ''">
+            AND (shop_name ILIKE '%' || #{keyword} || '%'
+            OR owner_name ILIKE '%' || #{keyword} || '%')
+        </if>
+    </select>
+
+    <!-- 고객 상세 조회 -->
+    <select id="selectCustomerDetail" resultType="com.mirae.hair.domain.customer.dto.CustomerDetailDto">
+        SELECT id,
+               shop_name,
+               owner_name,
+               business_number,
+               phone,
+               address,
+               memo,
+               is_deleted AS deleted,
+               created_at,
+               updated_at,
+               created_by
+        FROM customers
+        WHERE id = #{id}
+    </select>
+
+</mapper>

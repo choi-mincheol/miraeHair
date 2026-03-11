@@ -1,6 +1,6 @@
 package com.mirae.hair.domain.product.controller;
 
-import com.mirae.hair.domain.product.command.InventoryCommandService;
+import com.mirae.hair.domain.product.service.InventoryService;
 import com.mirae.hair.domain.product.dto.InventoryRequest;
 import com.mirae.hair.global.dto.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -32,7 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class InventoryController {
 
-    private final InventoryCommandService inventoryCommandService;
+    private final InventoryService inventoryService;
 
     /**
      * 재고 입고
@@ -45,7 +45,7 @@ public class InventoryController {
     @PostMapping("/in")
     public ResponseEntity<ApiResponse<Void>> stockIn(
             @RequestBody @Valid InventoryRequest request) {
-        inventoryCommandService.stockIn(request);
+        inventoryService.stockIn(request);
         return ResponseEntity.ok(ApiResponse.success());
     }
 
@@ -61,7 +61,7 @@ public class InventoryController {
     @PostMapping("/out")
     public ResponseEntity<ApiResponse<Void>> stockOut(
             @RequestBody @Valid InventoryRequest request) {
-        inventoryCommandService.stockOut(request);
+        inventoryService.stockOut(request);
         return ResponseEntity.ok(ApiResponse.success());
     }
 }

@@ -1,11 +1,10 @@
 package com.mirae.hair.domain.product.controller;
 
-import com.mirae.hair.domain.product.command.ProductCommandService;
 import com.mirae.hair.domain.product.dto.ProductCreateRequest;
 import com.mirae.hair.domain.product.dto.ProductDetailDto;
 import com.mirae.hair.domain.product.dto.ProductListDto;
 import com.mirae.hair.domain.product.dto.ProductUpdateRequest;
-import com.mirae.hair.domain.product.query.ProductQueryService;
+import com.mirae.hair.domain.product.service.ProductService;
 import com.mirae.hair.global.dto.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -22,14 +21,8 @@ import org.springframework.web.bind.annotation.*;
 /**
  * 상품 REST API Controller
  *
- * CQRS 패턴의 핵심 Controller:
- * → POST/PUT/DELETE → ProductCommandService (JPA)
- * → GET → ProductQueryService (MyBatis)
- *
- * 이 Controller가 CQRS 패턴의 "진입점" 역할을 한다:
- * → 클라이언트는 CQRS를 모른다. 그냥 /api/products에 요청을 보낸다.
- * → Controller가 요청 종류에 따라 Command/Query 서비스를 분배한다.
- * → 내부 구현이 바뀌어도(예: MyBatis → QueryDSL) Controller 인터페이스는 그대로이다.
+ * 상품 CRUD API
+ * → 등록/수정/삭제는 JPA, 조회는 MyBatis를 사용하는 ProductService에 위임한다.
  */
 @Tag(name = "상품", description = "상품 관리 API")
 @RestController
@@ -37,8 +30,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class ProductController {
 
-    private final ProductCommandService productCommandService;
-    private final ProductQueryService productQueryService;
+    private final ProductService productService;
 
     /**
      * 상품 등록 (옵션 포함)
@@ -51,7 +43,7 @@ public class ProductController {
     @PostMapping
     public ResponseEntity<ApiResponse<Long>> createProduct(
             @RequestBody @Valid ProductCreateRequest request) {
-        Long productId = productCommandService.createProduct(request);
+        Long productId = productService.createProduct(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(productId, "상품이 등록되었습니다"));
     }
@@ -83,7 +75,7 @@ public class ProductController {
             @Parameter(description = "카테고리 ID")
             @RequestParam(required = false) Long categoryId,
             @PageableDefault(size = 10) Pageable pageable) {
-        Page<ProductListDto> products = productQueryService.getProductList(keyword, categoryId, pageable);
+        Page<ProductListDto> products = productService.getProductList(keyword, categoryId, pageable);
         return ResponseEntity.ok(ApiResponse.success(products, "상품 목록 조회 성공"));
     }
 
@@ -103,7 +95,7 @@ public class ProductController {
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<ProductDetailDto>> getProductDetail(
             @PathVariable Long id) {
-        ProductDetailDto product = productQueryService.getProductDetail(id);
+        ProductDetailDto product = productService.getProductDetail(id);
         return ResponseEntity.ok(ApiResponse.success(product, "상품 상세 조회 성공"));
     }
 
@@ -120,7 +112,7 @@ public class ProductController {
     public ResponseEntity<ApiResponse<Long>> updateProduct(
             @PathVariable Long id,
             @RequestBody @Valid ProductUpdateRequest request) {
-        Long productId = productCommandService.updateProduct(id, request);
+        Long productId = productService.updateProduct(id, request);
         return ResponseEntity.ok(ApiResponse.success(productId, "상품이 수정되었습니다"));
     }
 
@@ -134,7 +126,7 @@ public class ProductController {
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "삭제 성공")
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteProduct(@PathVariable Long id) {
-        productCommandService.deleteProduct(id);
+        productService.deleteProduct(id);
         return ResponseEntity.ok(ApiResponse.success());
     }
 }

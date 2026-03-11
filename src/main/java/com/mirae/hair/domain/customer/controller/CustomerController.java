@@ -1,8 +1,7 @@
 package com.mirae.hair.domain.customer.controller;
 
-import com.mirae.hair.domain.customer.command.CustomerCommandService;
 import com.mirae.hair.domain.customer.dto.*;
-import com.mirae.hair.domain.customer.query.CustomerQueryService;
+import com.mirae.hair.domain.customer.service.CustomerService;
 import com.mirae.hair.global.dto.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -19,12 +18,8 @@ import org.springframework.web.bind.annotation.*;
 /**
  * 고객(미용실) REST API Controller
  *
- * CQRS 패턴 적용:
- * → POST/PUT/DELETE → CustomerCommandService (JPA)
- * → GET → CustomerQueryService (MyBatis)
- *
- * 상품 Controller와 동일한 패턴이다 (CQRS 두 번째 적용).
- * → 패턴이 반복되면서 "이게 CQRS 구조구나" 하는 감이 잡히게 된다.
+ * 고객(미용실) CRUD API
+ * → CustomerService에 등록/수정/삭제/조회를 위임한다.
  */
 @Tag(name = "고객(미용실)", description = "고객(미용실/거래처) 관리 API")
 @RestController
@@ -32,8 +27,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class CustomerController {
 
-    private final CustomerCommandService customerCommandService;
-    private final CustomerQueryService customerQueryService;
+    private final CustomerService customerService;
 
     /**
      * 고객 등록
@@ -43,7 +37,7 @@ public class CustomerController {
     @PostMapping
     public ResponseEntity<ApiResponse<Long>> createCustomer(
             @RequestBody @Valid CustomerCreateRequest request) {
-        Long customerId = customerCommandService.createCustomer(request);
+        Long customerId = customerService.createCustomer(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(customerId, "고객이 등록되었습니다"));
     }
@@ -58,7 +52,7 @@ public class CustomerController {
             @Parameter(description = "검색어 (미용실명/대표자명)")
             @RequestParam(required = false) String keyword,
             @PageableDefault(size = 10) Pageable pageable) {
-        Page<CustomerListDto> customers = customerQueryService.getCustomerList(keyword, pageable);
+        Page<CustomerListDto> customers = customerService.getCustomerList(keyword, pageable);
         return ResponseEntity.ok(ApiResponse.success(customers, "고객 목록 조회 성공"));
     }
 
@@ -70,7 +64,7 @@ public class CustomerController {
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<CustomerDetailDto>> getCustomerDetail(
             @PathVariable Long id) {
-        CustomerDetailDto customer = customerQueryService.getCustomerDetail(id);
+        CustomerDetailDto customer = customerService.getCustomerDetail(id);
         return ResponseEntity.ok(ApiResponse.success(customer, "고객 상세 조회 성공"));
     }
 
@@ -83,7 +77,7 @@ public class CustomerController {
     public ResponseEntity<ApiResponse<Long>> updateCustomer(
             @PathVariable Long id,
             @RequestBody @Valid CustomerUpdateRequest request) {
-        Long customerId = customerCommandService.updateCustomer(id, request);
+        Long customerId = customerService.updateCustomer(id, request);
         return ResponseEntity.ok(ApiResponse.success(customerId, "고객 정보가 수정되었습니다"));
     }
 
@@ -94,7 +88,7 @@ public class CustomerController {
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "삭제 성공")
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteCustomer(@PathVariable Long id) {
-        customerCommandService.deleteCustomer(id);
+        customerService.deleteCustomer(id);
         return ResponseEntity.ok(ApiResponse.success());
     }
 }

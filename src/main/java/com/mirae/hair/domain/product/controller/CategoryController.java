@@ -1,10 +1,9 @@
 package com.mirae.hair.domain.product.controller;
 
-import com.mirae.hair.domain.product.command.CategoryCommandService;
 import com.mirae.hair.domain.product.dto.CategoryCreateRequest;
 import com.mirae.hair.domain.product.dto.CategoryUpdateRequest;
 import com.mirae.hair.domain.product.dto.CategoryDto;
-import com.mirae.hair.domain.product.query.ProductQueryService;
+import com.mirae.hair.domain.product.service.CategoryService;
 import com.mirae.hair.global.dto.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -19,15 +18,8 @@ import java.util.List;
 /**
  * 카테고리 REST API Controller
  *
- * CQRS 패턴 적용:
- * → CategoryCommandService: 등록 (JPA)
- * → ProductQueryService: 조회 (MyBatis)
- * → Controller 하나에서 두 서비스를 모두 주입받아 사용한다.
- *
- * 왜 Controller에서 두 서비스를 모두 사용하는가?
- * → Controller는 "어떤 요청이 오면 어떤 서비스를 호출할지" 라우팅하는 역할이다.
- * → 등록 요청 → CommandService, 조회 요청 → QueryService로 분배한다.
- * → 서비스 내부는 분리되지만, 클라이언트에게는 하나의 API 엔드포인트로 보인다.
+ * 카테고리 CRUD API
+ * → CategoryService에 등록/수정/조회를 위임한다.
  */
 @Tag(name = "카테고리", description = "카테고리 관리 API")
 @RestController
@@ -35,8 +27,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CategoryController {
 
-    private final CategoryCommandService categoryCommandService;
-    private final ProductQueryService productQueryService;
+    private final CategoryService categoryService;
 
     /**
      * 카테고리 등록
@@ -51,7 +42,7 @@ public class CategoryController {
     @PostMapping
     public ResponseEntity<ApiResponse<Long>> createCategory(
             @RequestBody @Valid CategoryCreateRequest request) {
-        Long categoryId = categoryCommandService.createCategory(request);
+        Long categoryId = categoryService.createCategory(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(categoryId, "카테고리가 등록되었습니다"));
     }
@@ -63,7 +54,7 @@ public class CategoryController {
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공")
     @GetMapping
     public ResponseEntity<ApiResponse<List<CategoryDto>>> getCategoryList() {
-        List<CategoryDto> categories = productQueryService.getCategoryList();
+        List<CategoryDto> categories = categoryService.getCategoryList();
         return ResponseEntity.ok(ApiResponse.success(categories, "카테고리 목록 조회 성공"));
     }
 
@@ -76,7 +67,7 @@ public class CategoryController {
     public ResponseEntity<ApiResponse<Long>> updateCategory(
             @PathVariable Long id,
             @RequestBody @Valid CategoryUpdateRequest request) {
-        Long categoryId = categoryCommandService.updateCategory(id, request);
+        Long categoryId = categoryService.updateCategory(id, request);
         return ResponseEntity.ok(ApiResponse.success(categoryId, "카테고리가 수정되었습니다"));
     }
 }

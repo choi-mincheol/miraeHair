@@ -1,43 +1,38 @@
-package com.mirae.hair.domain.product.command;
+package com.mirae.hair.domain.product.service;
 
+import com.mirae.hair.domain.product.command.CategoryRepository;
 import com.mirae.hair.domain.product.domain.Category;
 import com.mirae.hair.domain.product.dto.CategoryCreateRequest;
+import com.mirae.hair.domain.product.dto.CategoryDto;
 import com.mirae.hair.domain.product.dto.CategoryUpdateRequest;
+import com.mirae.hair.domain.product.query.CategoryQueryMapper;
 import com.mirae.hair.global.exception.BusinessException;
 import com.mirae.hair.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 /**
- * 카테고리 Command 서비스 (생성/수정/삭제)
- *
- * CQRS 패턴에서 Command 담당:
- * → 데이터를 변경하는 작업(생성, 수정, 삭제)만 이 서비스에서 처리한다.
- * → 조회는 ProductQueryService(MyBatis)에서 처리한다.
- *
- * 왜 @Transactional이 필요한가?
- * → DB에 데이터를 변경하는 작업은 트랜잭션 안에서 실행되어야 한다.
- * → 중간에 에러가 나면 모든 변경 사항이 롤백(취소)된다.
- * → 비유: "은행 송금에서 출금은 됐는데 입금이 실패하면, 출금도 취소해야 한다"
- *   → 이것이 트랜잭션의 원자성(Atomicity)이다.
+ * 카테고리 서비스 (Command + Query 통합)
  */
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class CategoryCommandService {
+public class CategoryService {
 
     private final CategoryRepository categoryRepository;
+    private final CategoryQueryMapper categoryQueryMapper;
+
+    // ─────────────────────────────────────────
+    // Command (등록/수정) — JPA
+    // ─────────────────────────────────────────
 
     /**
      * 카테고리 등록
-     *
-     * @param request 카테고리 등록 요청 DTO
-     * @return 생성된 카테고리 ID
-     * @throws BusinessException 이미 존재하는 카테고리명인 경우 (CATEGORY_ALREADY_EXISTS)
      */
     public Long createCategory(CategoryCreateRequest request) {
-        // 카테고리명 중복 검사
         if (categoryRepository.existsByName(request.getName())) {
             throw new BusinessException(ErrorCode.CATEGORY_ALREADY_EXISTS);
         }
@@ -50,18 +45,25 @@ public class CategoryCommandService {
 
     /**
      * 카테고리 수정
-     *
-     * @param id      수정할 카테고리 ID
-     * @param request 수정 요청 DTO
-     * @return 수정된 카테고리 ID
      */
     public Long updateCategory(Long id, CategoryUpdateRequest request) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CATEGORY_NOT_FOUND));
 
-        // 더티체킹으로 자동 UPDATE
         category.update(request.getName(), request.getDisplayOrder());
 
         return category.getId();
+    }
+
+    // ─────────────────────────────────────────
+    // Query (조회) — MyBatis
+    // ─────────────────────────────────────────
+
+    /**
+     * 카테고리 목록 조회
+     */
+    @Transactional(readOnly = true)
+    public List<CategoryDto> getCategoryList() {
+        return categoryQueryMapper.selectCategoryList();
     }
 }

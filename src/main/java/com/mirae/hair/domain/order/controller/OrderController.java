@@ -1,10 +1,9 @@
 package com.mirae.hair.domain.order.controller;
 
-import com.mirae.hair.domain.order.command.OrderCommandService;
 import com.mirae.hair.domain.order.dto.OrderCreateRequest;
 import com.mirae.hair.domain.order.dto.OrderDetailDto;
 import com.mirae.hair.domain.order.dto.OrderListDto;
-import com.mirae.hair.domain.order.query.OrderQueryService;
+import com.mirae.hair.domain.order.service.OrderService;
 import com.mirae.hair.global.dto.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -24,9 +23,8 @@ import java.time.LocalDate;
 /**
  * 주문 REST API Controller
  *
- * CQRS 패턴 적용:
- * → POST(등록/취소) → OrderCommandService (JPA)
- * → GET(목록/상세) → OrderQueryService (MyBatis)
+ * 주문 CRUD API
+ * → OrderService에 등록/취소/조회를 위임한다.
  */
 @Tag(name = "주문", description = "주문/판매 관리 API")
 @RestController
@@ -34,8 +32,7 @@ import java.time.LocalDate;
 @RequiredArgsConstructor
 public class OrderController {
 
-    private final OrderCommandService orderCommandService;
-    private final OrderQueryService orderQueryService;
+    private final OrderService orderService;
 
     /**
      * 주문 등록 (가격 Snapshot + 재고 차감)
@@ -45,7 +42,7 @@ public class OrderController {
     @PostMapping
     public ResponseEntity<ApiResponse<Long>> createOrder(
             @RequestBody @Valid OrderCreateRequest request) {
-        Long orderId = orderCommandService.createOrder(request);
+        Long orderId = orderService.createOrder(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(orderId, "주문이 등록되었습니다"));
     }
@@ -69,7 +66,7 @@ public class OrderController {
             @Parameter(description = "종료일 (yyyy-MM-dd)")
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @PageableDefault(size = 10) Pageable pageable) {
-        Page<OrderListDto> orders = orderQueryService.getOrderList(customerId, startDate, endDate, pageable);
+        Page<OrderListDto> orders = orderService.getOrderList(customerId, startDate, endDate, pageable);
         return ResponseEntity.ok(ApiResponse.success(orders, "주문 목록 조회 성공"));
     }
 
@@ -81,7 +78,7 @@ public class OrderController {
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<OrderDetailDto>> getOrderDetail(
             @PathVariable Long id) {
-        OrderDetailDto order = orderQueryService.getOrderDetail(id);
+        OrderDetailDto order = orderService.getOrderDetail(id);
         return ResponseEntity.ok(ApiResponse.success(order, "주문 상세 조회 성공"));
     }
 
@@ -98,7 +95,7 @@ public class OrderController {
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "취소 성공")
     @PostMapping("/{id}/cancel")
     public ResponseEntity<ApiResponse<Void>> cancelOrder(@PathVariable Long id) {
-        orderCommandService.cancelOrder(id);
+        orderService.cancelOrder(id);
         return ResponseEntity.ok(ApiResponse.success());
     }
 }

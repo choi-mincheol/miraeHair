@@ -2,6 +2,7 @@ package com.mirae.hair.domain.product.controller;
 
 import com.mirae.hair.domain.product.command.CategoryCommandService;
 import com.mirae.hair.domain.product.dto.CategoryCreateRequest;
+import com.mirae.hair.domain.product.dto.CategoryUpdateRequest;
 import com.mirae.hair.domain.product.dto.CategoryDto;
 import com.mirae.hair.domain.product.query.ProductQueryService;
 import com.mirae.hair.global.dto.ApiResponse;
@@ -64,5 +65,18 @@ public class CategoryController {
     public ResponseEntity<ApiResponse<List<CategoryDto>>> getCategoryList() {
         List<CategoryDto> categories = productQueryService.getCategoryList();
         return ResponseEntity.ok(ApiResponse.success(categories, "카테고리 목록 조회 성공"));
+    }
+
+    /**
+     * 카테고리 수정
+     */
+    @Operation(summary = "카테고리 수정", description = "카테고리 정보를 수정합니다")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "수정 성공")
+    @PutMapping("/{id}")
+    public ResponseEntity<ApiResponse<Long>> updateCategory(
+            @PathVariable Long id,
+            @RequestBody @Valid CategoryUpdateRequest request) {
+        Long categoryId = categoryCommandService.updateCategory(id, request);
+        return ResponseEntity.ok(ApiResponse.success(categoryId, "카테고리가 수정되었습니다"));
     }
 }

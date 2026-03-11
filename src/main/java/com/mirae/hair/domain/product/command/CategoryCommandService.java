@@ -2,6 +2,7 @@ package com.mirae.hair.domain.product.command;
 
 import com.mirae.hair.domain.product.domain.Category;
 import com.mirae.hair.domain.product.dto.CategoryCreateRequest;
+import com.mirae.hair.domain.product.dto.CategoryUpdateRequest;
 import com.mirae.hair.global.exception.BusinessException;
 import com.mirae.hair.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -45,5 +46,22 @@ public class CategoryCommandService {
         Category saved = categoryRepository.save(category);
 
         return saved.getId();
+    }
+
+    /**
+     * 카테고리 수정
+     *
+     * @param id      수정할 카테고리 ID
+     * @param request 수정 요청 DTO
+     * @return 수정된 카테고리 ID
+     */
+    public Long updateCategory(Long id, CategoryUpdateRequest request) {
+        Category category = categoryRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CATEGORY_NOT_FOUND));
+
+        // 더티체킹으로 자동 UPDATE
+        category.update(request.getName(), request.getDisplayOrder());
+
+        return category.getId();
     }
 }

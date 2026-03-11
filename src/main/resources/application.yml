@@ -1,0 +1,36 @@
+# ===========================================
+# 공통 설정 (모든 프로필에서 공유)
+# ===========================================
+spring:
+  application:
+    name: hair-pjt
+
+  # 기본 프로필: dev (로컬 개발 환경)
+  profiles:
+    active: dev
+
+# 서버 설정
+server:
+  port: 8080
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+# Swagger (SpringDoc OpenAPI) 설정
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+  api-docs:
+    path: /v3/api-docs
+
+# MyBatis 설정
+mybatis:
+  # mapper XML 파일 위치 (src/main/resources/mapper/ 하위 전체)
+  mapper-locations: classpath:mapper/**/*.xml
+  configuration:
+    # DB 컬럼명(snake_case) → Java 필드명(camelCase) 자동 변환
+    map-underscore-to-camel-case: true
